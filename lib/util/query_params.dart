@@ -62,6 +62,11 @@ class _QueryParams {
     return _queryParam('sample_id');
   }
 
+  String get userId {
+    var userId = _queryParam('userId') ?? '';
+    return userId;
+  }
+
   String? get sampleChannel {
     return _queryParam('sample_channel');
   }
@@ -84,6 +89,30 @@ class _QueryParams {
 
   String? get webServer {
     return _queryParam('webserver');
+  }
+
+  String? get courseId {
+    return _queryParam('courseId');
+  }
+
+  String? get chapterId {
+    return _queryParam('chapterId');
+  }
+
+  String? get lessonId {
+    return _queryParam('lessonId');
+  }
+
+  String? get uid {
+    return _queryParam('uid');
+  }
+
+  bool? get gutter {
+    if (_queryParam('gutter') == 'true') {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   int? get initialSplit {

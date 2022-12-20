@@ -20,6 +20,7 @@ import 'core/keys.dart';
 import 'core/modules.dart';
 import 'dart_pad.dart';
 import 'documentation.dart';
+import 'editing/codemirror_options.dart';
 import 'editing/editor_codemirror.dart';
 import 'elements/analysis_results_controller.dart';
 import 'elements/bind.dart';
@@ -248,7 +249,6 @@ class Playground extends EditorUi implements GistContainer, GistController {
       Sample('ef06ab3ce0b822e6cc5db0575248e6e2', 'Riverpod', Layout.flutter),
       Sample(
           'fdd369962f4ff6700a83c8a540fd6c4c', 'Flutter Bloc', Layout.flutter),
-      Sample('4a546fc44db8aca351bfe791e251acc2', 'GoRouter', Layout.flutter),
       Sample('c0f7c578204d61e08ec0fbc4d63456cd', 'Hello World', Layout.dart),
       Sample('d3bd83918d21b6d5f778bdc69c3d36d6', 'Fibonacci', Layout.dart),
       Sample('4a68e553746602d851ab3da6aeafc3dd', 'HTTP requests', Layout.dart),
@@ -533,7 +533,8 @@ class Playground extends EditorUi implements GistContainer, GistController {
     deps[GistLoader] = GistLoader.defaultFilters();
 
     // Set up CodeMirror
-    editor = (editorFactory as CodeMirrorFactory).createFromElement(_editorHost)
+    editor = (editorFactory as CodeMirrorFactory)
+        .createFromElement(_editorHost, options: codeMirrorOptions)
       ..theme = 'darkpad'
       ..mode = 'dart'
       ..keyMap = window.localStorage['codemirror_keymap'] ?? 'default'
@@ -800,7 +801,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
   }
 
   @override
-  Future<bool> handleRun() async {
+  Future<bool> handleRun({bool test = false, String str = "none"}) async {
     final success = await super.handleRun();
     if (success) {
       _webOutputLabel.setAttr('hidden');

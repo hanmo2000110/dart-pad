@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:html';
 
+import 'package:dart_pad/util/query_params.dart';
+import 'package:firebase/firebase.dart';
+import 'package:firebase/firestore.dart';
 import 'package:logging/logging.dart';
 import 'package:mdc_web/mdc_web.dart';
 import 'package:meta/meta.dart';
 
 import '../context.dart';
 import '../dart_pad.dart';
-import '../editing/codemirror_options.dart';
 import '../editing/editor.dart';
 import '../elements/analysis_results_controller.dart';
 import '../elements/button.dart';
@@ -28,6 +30,8 @@ abstract class EditorUi {
   late final AnalysisResultsController analysisResultsController;
   late final Editor editor;
   late final MDCButton runButton;
+  late final MDCButton submitButton;
+  late final MDCButton re_submitButton;
   late final ExecutionService executionService;
 
   /// The dialog box for information like pub package versions.
@@ -56,20 +60,6 @@ abstract class EditorUi {
     keys.bind(['shift-ctrl-/', 'shift-macctrl-/'], () {
       showKeyboardDialog();
     }, 'Keyboard Shortcuts');
-
-    _initEscapeTabSwitching();
-  }
-
-  // When switching to vim-insert mode, disable esc tab and esc shift-tab
-  // as the esc key is required to exit the mode
-  void _initEscapeTabSwitching() {
-    editor.onVimModeChange.listen((e) {
-      if (editor.keyMap == 'vim-insert') {
-        editor.setOption('extraKeys', extraKeysWithoutEscapeTab);
-      } else {
-        editor.setOption('extraKeys', extraKeysWithEscapeTab);
-      }
-    });
   }
 
   Future<void> showKeyboardDialog() async {
@@ -194,12 +184,91 @@ abstract class EditorUi {
     }
   }
 
-  Future<bool> handleRun() async {
+  Future<bool> handleRun({bool test = false, String str = "none"}) async {
+    print("serve test12");
     ga.sendEvent('main', 'run');
     runButton.disabled = true;
-
+    final Firestore store = firestore();
     final compilationTimer = Stopwatch()..start();
     final compileRequest = CompileRequest()..source = fullDartSource;
+    print("testing testing");
+
+    if (test == false) {
+      final ref = await store
+          .collection("Records")
+          .where('lessonId', '==', queryParams.lessonId)
+          .where('uid', '==', queryParams.uid)
+          .get();
+
+      if (ref.docs.isNotEmpty) {
+        await ref.docs.first.ref.update(
+          data: {
+            'submittedCount':
+                await ref.docs.first.data()['submittedCount'] + 1 ?? 1,
+            // 'userWrittenCode': ,
+          },
+        );
+      } else {
+        print("document doesnt exist");
+      }
+
+      compileRequest.source = fullDartSource;
+    } else {
+      // print("test start");
+      var temp = fullDartSource;
+      // print(temp);
+      temp =
+          temp.replaceAll('void', 'dynamic').replaceAll('main(', 'mainTest(');
+      // print(temp);
+      temp = temp.replaceAll(
+          "testResult.add('__TESTRESULT__", "print('__TESTRESULT__");
+      var data =
+          await store.collection('Lessons').doc(queryParams.lessonId).get();
+      print("before loading test Code");
+      print(data..data()['testCode']);
+      var testCode = data.data()['testCode'] as String;
+
+      final ref = await store
+          .collection("Records")
+          .where('lessonId', '==', queryParams.lessonId)
+          .where('uid', '==', queryParams.uid)
+          .get();
+      print("before loading doc = ref.docs.first");
+
+      if (!ref.docs.isEmpty) {
+        temp
+            .replaceAll(
+                """dynamic _result(bool success, [List<String> messages = const []]) {
+  // Join messages into a comma-separated list for inclusion in the JSON array.
+  final joinedMessages = messages.map((m) => '"\$m"').join(',');
+  print('__TESTRESULT__ {"success": \$success, "messages": [\$joinedMessages]}');
+}
+
+// Ensure we have at least one use of `_result`.
+var resultFunction = _result;
+
+// Placeholder for unimplemented methods in dart-pad exercises.
+// ignore: non_constant_identifier_names, sdk_version_never
+Never TODO([String message = '']) => throw UnimplementedError(message);""", '')
+            .replaceAll('dynamic', 'void')
+            .replaceAll('testResult.add', 'print')
+            .replaceAll('mainTest', 'main');
+        print(temp);
+        await ref.docs.first.ref.update(
+          data: {
+            'userWrittenCode': temp,
+          },
+        );
+      } else {
+        print("document doesnt exist");
+      }
+
+      compileRequest.source = temp.replaceAll(
+              "import 'package:flutter/material.dart';",
+              "import 'package:flutter/material.dart';\nimport 'package:flutter_test/flutter_test.dart';") +
+          testCode;
+    }
+    print(compileRequest.source);
 
     try {
       if (shouldCompileDDC) {
@@ -244,9 +313,15 @@ abstract class EditorUi {
     } catch (e) {
       ga.sendException('${e.runtimeType}');
       final message = e is ApiRequestError ? e.message : '$e';
-      showSnackbar('Error compiling to JavaScript');
+      var mrd_loading = querySelector('.mdc-result-dialog-loading');
+      mrd_loading?.style.display = 'none';
+      var dimmed = querySelector('.dimmed');
+      dimmed?.style.display = 'none';
+      showSnackbar('Syntax Error');
       clearOutput();
-      showOutput('Error compiling to JavaScript:\n$message', error: true);
+      showOutput(
+          '[Syntax Error]\nPlease see the issues panel in the bottom right corner and fix the errors.\n$message',
+          error: true);
       return false;
     } finally {
       runButton.disabled = false;
@@ -365,7 +440,7 @@ class KeyboardDialog {
 
     final completer = Completer<DialogResult>();
 
-    final okButtonSub = _okButton.onClick.listen((_) {
+    _okButton.onClick.listen((_) {
       final bool vimSet = _vimSwitch.checked!;
 
       // change keyMap if needed and *remember* their choice for next startup
@@ -375,22 +450,13 @@ class KeyboardDialog {
       } else {
         if (currentKeyMap != 'default') editor.keyMap = 'default';
         window.localStorage['codemirror_keymap'] = 'default';
-        editor.setOption('extraKeys', extraKeysWithEscapeTab);
       }
       completer.complete(vimSet ? DialogResult.yes : DialogResult.ok);
     });
 
-    void handleClosing(Event _) {
-      completer.complete(DialogResult.cancel);
-    }
-
-    _mdcDialog.listen('MDCDialog:closing', handleClosing);
-
     _mdcDialog.open();
 
     return completer.future.then((v) {
-      okButtonSub.cancel();
-      _mdcDialog.unlisten('MDCDialog:closing', handleClosing);
       _mdcDialog.close();
       return v;
     });

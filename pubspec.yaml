@@ -11,9 +11,11 @@ dependencies:
   codemirror: ^0.7.6+5.65.5
   collection: ^1.16.0
   encrypt: ^5.0.1
+  firebase: ^9.0.2
   fluttering_phrases: ^0.3.1
   html_unescape: ^2.0.0
   http: ^0.13.0
+  intl: ^0.17.0
   js: ^0.6.4
   json_annotation: ^4.5.0
   logging: ^1.0.0
@@ -48,4 +50,5 @@ dev_dependencies:
 # https://github.com/material-components/material-components-web/pull/7158
 # https://github.com/dart-lang/dart-pad/issues/2388
 dependency_overrides:
+  built_value: ^8.1.0
   sass: 1.32.10

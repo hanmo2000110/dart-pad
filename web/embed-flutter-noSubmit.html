@@ -37,7 +37,7 @@ BSD-style license that can be found in the LICENSE file. -->
     <!-- check that local storage is enabled -->
     <script src="scripts/check_localstorage.js"></script>
 
-    <script defer src="scripts/embed_dart.dart.js"></script>
+    <script defer src="scripts/embed_flutter.dart.js"></script>
     <script defer src="scripts/ga.js"></script>
     <script type="text/javascript" src="scripts/dark_mode.js"></script>
 
@@ -435,13 +435,14 @@ BSD-style license that can be found in the LICENSE file. -->
                 <i class="material-icons mdc-button__icon">play_arrow</i>
                 Run
             </button> -->
-            <div class="last-submitted" style="color: white; margin-right: 10px; font-size: 14px; display: flex; ">
+            <div class="last-submitted" style="color: white; margin-right: 10px; font-size: 14px; display: flex; "
+                hidden>
                 Last submitted :
                 <div style="color: #49A0ff; margin-left: 4px;" class="date">
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 </div>
             </div>
-            <div class="final-score" style="color: white; margin-right: 40px; font-size: 14px; display: flex;">
+            <div class="final-score" style="color: white; margin-right: 40px; font-size: 14px; display: flex;" hidden>
                 Final Score :
                 <div style="color:#49a0ff;margin-left: 4px;" class="score">
                     &nbsp;&nbsp;0
@@ -457,12 +458,12 @@ BSD-style license that can be found in the LICENSE file. -->
             </button>
             <button id="submit-button" class="mdc-button
                     mdc-button--outlined" style="background-color: #ffa400;
-                    border-color: #ffa400; border-radius: 4px">
+                    border-color: #ffa400; border-radius: 4px" hidden>
                 <image src='submit_arrow.png' style="padding-right: 10px;"></image>
                 Submit
             </button>
             <button id="re-submit-button" class="mdc-button
-                    mdc-button--outlined" style="border-color: #ffa400; display: none;">
+                    mdc-button--outlined" style="border-color: #ffa400; display: none;" hidden>
                 <i class="material-icons mdc-button__icon">check</i>
                 Re-Submit
             </button>
@@ -488,10 +489,9 @@ BSD-style license that can be found in the LICENSE file. -->
         </div>
     </div>
     <section id="tab-container">
-        <div id="editor-container">
-            <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
-                <div id="user-code-editor" spellcheck="false"></div>
-                <div id="search-dialog" class="search-embed-dart" hidden>
+        <div id="editor-and-console-container">
+            <div id="editor-container">
+                <div id="search-dialog" class="search-embed-flutter" hidden>
                     <div id="find-col1">
                         <button id="open-replace" title="Toggle Replace"
                             class="mdc-icon-button material-icons">expand_more
@@ -535,28 +535,33 @@ BSD-style license that can be found in the LICENSE file. -->
                         </div>
                     </div>
                 </div>
-            </div>
-            <div id="solution-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="solution-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
-            </div>
-            <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
+                <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
+                    <div id="user-code-editor" spellcheck="false"></div>
+                </div>
             </div>
             <div class="editor-button-group">
                 <div id="dartbusy" class="busylight"></div>
                 <button id="copy-code" title="Copy code" class="mdc-icon-button material-icons">file_copy</button>
                 <button id="open-in-dartpad" title="Full screen" class="mdc-icon-button material-icons">launch</button>
             </div>
-        </div>
-        <div id="console-view" hidden>
-            <div id="console-output-header">
-                <span class="view-label">Console <span id="unread-console-counter" class="Counter" hidden></span></span>
-                <button id="console-clear-button" title="Clear console"
-                    class="console-clear-icon mdc-icon-button material-icons"></button>
+            <div id="console-output-footer" class="footer-top-border" hidden>
+                <div id="console-output-header">
+                    <span class="view-label">
+                        Console <span id="unread-console-counter" class="Counter" hidden></span>
+                    </span>
+                    <div id="console-expand-icon-container">
+                        <button id="console-clear-button" title="Clear console"
+                            class="console-clear-icon mdc-icon-button"></button>
+                        <button id="console-expand-icon" title="Expand console" class="mdc-icon-button material-icons">
+                            expand_less
+                        </button>
+                    </div>
+                </div>
+                <div id="console-output-container" class="console custom-scrollbar" hidden></div>
             </div>
-            <div id="console-output-container" class="console custom-scrollbar"></div>
         </div>
-        <div id="web-output" hidden>
+        <div id="web-output">
+            <span id="web-output-label" class="view-label">UI Output</span>
             <!-- allow-popups allows plugins like url_launcher to open popups. -->
             <iframe id="frame" sandbox="allow-scripts allow-popups" class="flex-auto">
             </iframe>
@@ -568,6 +573,7 @@ BSD-style license that can be found in the LICENSE file. -->
             </div>
         </div>
     </section>
+
     <footer flex layout horizontal class="footer">
         <div id="feature-message" class="info-message"></div>
         <div id="issues-message" class="info-message"></div>

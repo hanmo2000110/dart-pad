@@ -1,0 +1,224 @@
+{
+  "hosting": [
+    {
+      "site": "dartpad-custom",
+      "public": "build",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrite": [
+        {
+          "source": "/dart-servie-2",
+          "run": {
+            "serviceId": "dart-service-2"
+          }
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(eot|otf|ttf|tzf|ttc|js|json|png|mp3|woff|font.css)",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ]
+        },
+        {
+          "source": "**/*.png/*",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ]
+        },
+        {
+          "source": "*",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "X-Requested-With",
+              "value": "XMLHttpRequest"
+            }
+          ]
+        },
+        {
+          "source": "**/*.mp3/*",
+          "headers": [
+            {
+              "key": "Origin",
+              "value": "true"
+            }
+          ]
+        },
+        {
+          "source": "**/FontManifest.json",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(jpg|jpeg|gif|png)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "max-age=7200"
+            }
+          ]
+        },
+        {
+          "source": "404.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "max-age=300"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "site": "dartpad-no-encrypt",
+      "public": "build",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrite": [
+        {
+          "source": "/dart-servie-2",
+          "run": {
+            "serviceId": "dart-service-2"
+          }
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(eot|otf|ttf|tzf|ttc|js|json|png|mp3|woff|font.css)",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Allow-Same-Origin",
+              "value": "*"
+            },
+            {
+              "key": "origin",
+              "value": "https://dartpad-no-encrypt.firebaseapp.com"
+            }
+          ]
+        },
+        {
+          "source": "**/*.png/*",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Allow-Same-Origin",
+              "value": "*"
+            },
+            {
+              "key": "origin",
+              "value": "https://dartpad-no-encrypt.firebaseapp.com"
+            }
+          ]
+        },
+        {
+          "source": "*",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "X-Requested-With",
+              "value": "XMLHttpRequest"
+            },
+            {
+              "key": "Allow-Same-Origin",
+              "value": "*"
+            },
+            {
+              "key": "origin",
+              "value": "https://dartpad-no-encrypt.firebaseapp.com"
+            }
+          ]
+        },
+        {
+          "source": "**/*.mp3/*",
+          "headers": [
+            {
+              "key": "Origin",
+              "value": "true"
+            },
+            {
+              "key": "Allow-Same-Origin",
+              "value": "*"
+            },
+            {
+              "key": "origin",
+              "value": "https://dartpad-no-encrypt.firebaseapp.com"
+            }
+          ]
+        },
+        {
+          "source": "**/FontManifest.json",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Allow-Same-Origin",
+              "value": "*"
+            },
+            {
+              "key": "origin",
+              "value": "https://dartpad-no-encrypt.firebaseapp.com"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(jpg|jpeg|gif|png)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "max-age=7200"
+            },
+            {
+              "key": "Allow-Same-Origin",
+              "value": "*"
+            },
+            {
+              "key": "origin",
+              "value": "https://dartpad-no-encrypt.firebaseapp.com"
+            }
+          ]
+        },
+        {
+          "source": "404.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "max-age=300"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

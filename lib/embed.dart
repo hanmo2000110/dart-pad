@@ -7,6 +7,9 @@ import 'dart:convert';
 import 'dart:html' hide Document, Console;
 import 'dart:math' as math;
 
+import 'package:firebase/firestore.dart';
+import 'package:firebase/firebase.dart' as firebase;
+import 'package:intl/intl.dart';
 import 'package:mdc_web/mdc_web.dart';
 import 'package:split/split.dart';
 
@@ -16,6 +19,7 @@ import 'context.dart';
 import 'core/dependencies.dart';
 import 'core/modules.dart';
 import 'dart_pad.dart';
+import 'editing/codemirror_options.dart';
 import 'editing/editor_codemirror.dart';
 import 'elements/analysis_results_controller.dart';
 import 'elements/button.dart';
@@ -41,8 +45,108 @@ const int defaultSplitterWidth = 6;
 Embed? get embed => _embed;
 
 Embed? _embed;
+Element? mrd_loading;
+Element? dimmed;
+Element? mrd_finish;
+Element? mrd_init;
+Element? mdc_result_dialog_Correct;
+Element? mdc_result_dialog_Incorrect;
+// Element? fireworks;
+Element? play;
+Element? stop;
+Element? score;
+Element? date;
+Element? final_score;
+Element? lastsubmitted;
+Element? submit_button;
+Element? re_submit_button;
+Element? gutter;
 
-void init(EmbedOptions options) {
+String output = '';
+late Firestore store;
+
+Future<void> init(EmbedOptions options) async {
+  // firebase.initializeApp(
+  //   apiKey: 'AIzaSyDoTPZVYLfCtW3dcr3fG65w8jESR2FM19U',
+  //   authDomain: 'new-ml-6c02d.firebaseapp.com',
+  //   databaseURL: 'new-ml-6c02d.firebaseio.com',
+  //   projectId: 'new-ml-6c02d',
+  //   appId: '1:801746107741:web:d3b0f57301fc5c2978fcb4',
+  //   storageBucket: 'new-ml-6c02d.appspot.com',
+  // );
+
+  await firebase.initializeApp(
+    apiKey: 'AIzaSyAXnmQ_7P1wnY74vdMeZHdWExwbpI-ncA0',
+    authDomain: 'new-ml-dev.firebaseapp.com',
+    databaseURL: 'new-ml-dev.firebaseio.com',
+    projectId: 'new-ml-dev',
+    appId: '1:801746107741:web:d3b0f57301fc5c2978fcb4',
+    storageBucket: 'new-ml-dev.appspot.com',
+  );
+  // print("serve test");
+  await firebase
+      .auth()
+      // .signInAnonymously();
+      .signInWithEmailAndPassword("dartpad@gmail.com", "12345678");
+
+  mrd_finish = querySelector('.mdc-result-dialog-finish');
+  mrd_finish?.style.setProperty('display', "none");
+  mrd_loading = querySelector('.mdc-result-dialog-loading');
+  mrd_loading?.style.setProperty('display', "none");
+
+  mdc_result_dialog_Correct = querySelector('.mdc-result-dialog-correct');
+  mdc_result_dialog_Correct?.style.setProperty('display', "none");
+  dimmed = querySelector('.dimmed');
+  dimmed?.style.setProperty('display', "none");
+  mdc_result_dialog_Incorrect = querySelector('.mdc-result-dialog-Incorrect');
+  mdc_result_dialog_Incorrect?.style.setProperty('display', "none");
+  submit_button = querySelector('#submit-button');
+  re_submit_button = querySelector('#re-submit-button');
+  // fireworks = querySelector('.fireworks');
+
+  play = querySelector('#play');
+  stop = querySelector('#pause');
+
+  score = querySelector('.score');
+  date = querySelector('.date');
+
+  final_score = querySelector('.last-submitted');
+  lastsubmitted = querySelector('.final-score');
+
+  store = firebase.firestore();
+  final ref = await store.collection('Lessons').doc(queryParams.lessonId).get();
+  final record = await store
+      .collection('Records')
+      .where('uid', '==', queryParams.uid)
+      .where('lessonId', '==', queryParams.lessonId)
+      .get();
+  if (ref.exists) {
+    if (ref.data()['lessonType'] == 'L' || ref.data()['lessonType'] == 'D') {
+      submit_button?.style.setProperty('display', "none");
+      final_score?.style.setProperty('display', "none");
+      lastsubmitted?.style.setProperty('display', "none");
+    }
+  }
+
+  if (record.docs.isEmpty) {
+    re_submit_button!.style.setProperty('display', 'none');
+  } else {
+    if (record.docs.first.data()['submittedTime'] == null) {
+      re_submit_button!.style.setProperty('display', 'none');
+    } else {
+      submit_button?.style.setProperty('display', "none");
+      re_submit_button!.style.removeProperty('display');
+    }
+    if (record.docs.first.data()['submittedTime'] != null) {
+      var t = record.docs.first.data()['submittedTime'];
+      var datetime = DateFormat("yyyy-MM-dd hh:mm:ss").parse(t.toString());
+      date!.text = DateFormat("MM/dd/yyyy hh:mm:ss a").format(datetime);
+    }
+    if (record.docs.first.data()['microTestScore'] != 0) {
+      score!.text = record.docs.first.data()['microTestScore'].toString();
+    }
+  }
+  // print("serve test2");
   _embed = Embed(options);
 }
 
@@ -64,7 +168,7 @@ class Embed extends EditorUi {
   late final MDCButton reloadGistButton;
   late final MDCButton installButton;
   late final MDCButton formatButton;
-  late final MDCButton showHintButton;
+  // late final MDCButton showHintButton;
   late final MDCButton copyCodeButton;
   late final MDCButton openInDartPadButton;
   late final MDCButton menuButton;
@@ -120,7 +224,7 @@ class Embed extends EditorUi {
     runButton.disabled = value;
     formatButton.disabled = value;
     reloadGistButton.disabled = value;
-    showHintButton.disabled = value;
+    // showHintButton.disabled = value;
     copyCodeButton.disabled = value;
   }
 
@@ -156,16 +260,50 @@ class Embed extends EditorUi {
         }),
       );
     }
-
+    // print("serve test3");
     solutionTab = DElement(querySelector('#solution-tab')!);
-
+    // print("serve test31");
     navBarElement = DElement(querySelector('#navbar')!);
-
+    // print("serve test32");
     unreadConsoleCounter =
         Counter(querySelector('#unread-console-counter') as SpanElement);
-
-    runButton = MDCButton(querySelector('#execute') as ButtonElement)
+    // print("serve test34");
+    runButton = MDCButton(querySelector('#run-button') as ButtonElement)
       ..onClick.listen((_) => handleRun());
+    // print("serve test35");
+    submitButton = MDCButton(querySelector('#submit-button') as ButtonElement)
+      ..onClick.listen((_) async {
+        dimmed!.style.removeProperty("display");
+        await (mrd_loading?.style.removeProperty("display"));
+        await handleRun(test: true);
+
+        await Future.delayed(Duration(seconds: 3)).then((value) {
+          mrd_finish?.style.display = 'none';
+          mdc_result_dialog_Correct?.style.setProperty('display', "none");
+          mdc_result_dialog_Incorrect!.style.setProperty('display', "none");
+          mrd_finish!.style.setProperty('display', "none");
+          dimmed!.style.setProperty('display', "none");
+        });
+
+        submit_button!.style.setProperty('display', 'none');
+        re_submit_button!.style.removeProperty('display');
+      });
+    // print("serve test33");
+    re_submitButton =
+        MDCButton(querySelector('#re-submit-button') as ButtonElement)
+          ..onClick.listen((_) async {
+            dimmed!.style.removeProperty("display");
+            await (mrd_loading?.style.removeProperty("display"));
+            await handleRun(test: true);
+            await Future.delayed(Duration(seconds: 3)).then((value) {
+              mrd_finish?.style.display = 'none';
+
+              mdc_result_dialog_Correct?.style.setProperty('display', "none");
+              mdc_result_dialog_Incorrect!.style.setProperty('display', "none");
+              mrd_finish!.style.setProperty('display', "none");
+              dimmed!.style.setProperty('display', "none");
+            });
+          });
 
     // Flutter showcase mode
     final editorCodeInputTabButtonElement =
@@ -177,11 +315,24 @@ class Embed extends EditorUi {
               (_) => _toggleCodeInput(),
             );
     }
-
+    // print("serve test333");
     reloadGistButton = MDCButton(querySelector('#reload-gist') as ButtonElement)
-      ..onClick.listen((_) {
-        if (gistId!.isNotEmpty || sampleId.isNotEmpty || githubParamsPresent) {
-          _loadAndShowGist();
+      ..onClick.listen((_) async {
+        if (queryParams.uid != null &&
+            queryParams.courseId != null &&
+            queryParams.chapterId != null &&
+            queryParams.lessonId != null) {
+          final Firestore store = firebase.firestore();
+          var data =
+              await store.collection('Lessons').doc(queryParams.lessonId).get();
+          setContextSources(<String, String>{
+            'main.dart': data.data()['mlCode'] as String,
+            'index.html': '',
+            'styles.css': '',
+            'solution.dart': '',
+            'test.dart': '',
+            'hint.txt': '',
+          });
         } else {
           _resetCode();
         }
@@ -194,20 +345,20 @@ class Embed extends EditorUi {
         querySelector('#open-in-dartpad') as ButtonElement,
         isIcon: true)
       ..onClick.listen((_) => _handleOpenInDartPad());
-
-    showHintButton = MDCButton(querySelector('#show-hint') as ButtonElement)
-      ..onClick.listen((_) {
-        final hintElement = DivElement()..text = context.hint;
-        final showSolutionButton = AnchorElement()
-          ..style.cursor = 'pointer'
-          ..text = 'Show solution';
-        showSolutionButton.onClick.listen((_) {
-          tabController.selectTab('solution', force: true);
-        });
-        hintBox.showElements([hintElement, showSolutionButton]);
-        ga.sendEvent('view', 'hint');
-      })
-      ..element.hidden = true;
+    // print("serve test3333");
+    // showHintButton = MDCButton(querySelector('#show-hint') as ButtonElement)
+    //   ..onClick.listen((_) {
+    //     final hintElement = DivElement()..text = context.hint;
+    //     final showSolutionButton = AnchorElement()
+    //       ..style.cursor = 'pointer'
+    //       ..text = 'Show solution';
+    //     showSolutionButton.onClick.listen((_) {
+    //       tabController.selectTab('solution', force: true);
+    //     });
+    //     hintBox.showElements([hintElement, showSolutionButton]);
+    //     ga.sendEvent('view', 'hint');
+    //   })
+    //   ..element.hidden = true;
 
     tabController.setTabVisibility('test', false);
     showTestCodeCheckmark = DElement(querySelector('#show-test-checkmark')!);
@@ -247,21 +398,22 @@ class Embed extends EditorUi {
       ..onClick.listen(
         (_) => _format(),
       );
-    installButton = MDCButton(querySelector('#install-button') as ButtonElement)
-      ..onClick.listen(
-        (_) => _showInstallPage(),
-      );
+    // installButton = MDCButton(querySelector('#install-button') as ButtonElement)
+    //   ..onClick.listen(
+    //     (_) => _showInstallPage(),
+    //   );
 
     testResultBox = FlashBox(querySelector('#test-result-box') as DivElement);
     hintBox = FlashBox(querySelector('#hint-box') as DivElement);
     final editorTheme = isDarkMode ? 'darkpad' : 'dartpad';
 
-    editor =
-        editorFactory.createFromElement(querySelector('#user-code-editor')!)
-          ..theme = editorTheme
-          ..mode = 'dart'
-          ..keyMap = window.localStorage['codemirror_keymap'] ?? 'default'
-          ..showLineNumbers = true;
+    editor = editorFactory.createFromElement(
+        querySelector('#user-code-editor')!,
+        options: codeMirrorOptions)
+      ..theme = editorTheme
+      ..mode = 'dart'
+      ..keyMap = window.localStorage['codemirror_keymap'] ?? 'default'
+      ..showLineNumbers = true;
 
     if (!showInstallButton) {
       querySelector('#install-button')!.setAttribute('hidden', '');
@@ -276,14 +428,285 @@ class Embed extends EditorUi {
       consoleExpandController.showOutput(err, error: true);
     });
 
-    executionService.onStdout.listen((msg) {
-      consoleExpandController.showOutput(msg);
-    });
+    // print("serve test5");
+    void setCorrect(int i) {
+      var temp = querySelector('.result${i - 1}');
+      var text_temp = querySelector('.text${i - 1}');
 
-    executionService.testResults.listen((result) {
-      if (result.messages.isEmpty) {
-        result.messages
-            .add(result.success ? 'All tests passed!' : 'Test failed.');
+      text_temp!.style.color = '#3491ff';
+      temp!.style.opacity = '1';
+      text_temp.text = 'Correct';
+    }
+
+    void setInCorrect(int i) {
+      var temp = querySelector('.result${i - 1}');
+      var text_temp = querySelector('.text${i - 1}');
+
+      text_temp!.style.color = '#E4564F';
+      temp!.style.opacity = '1';
+      text_temp.text = 'Incorrect';
+    }
+
+    void setBlur(int i) {
+      var temp = querySelector('.result${i}');
+      var text_temp = querySelector('.text$i');
+
+      temp!.style.opacity = '0.15';
+      temp.style.color = '#eaedf8';
+      text_temp!.style.color = '#eaedf8';
+    }
+
+    Future<void> endTest() async {
+      mdc_result_dialog_Correct?.style.setProperty('display', "none");
+      mdc_result_dialog_Incorrect?.style.setProperty('display', "none");
+      stop!.click();
+      mrd_finish!.style.removeProperty("display");
+      play!.click();
+      await Future.delayed(Duration(seconds: 4)).then((value) {
+        mrd_finish?.style.display = 'none';
+        mdc_result_dialog_Correct?.style.setProperty('display', "none");
+        mdc_result_dialog_Incorrect!.style.setProperty('display', "none");
+        mrd_finish!.style.setProperty('display', "none");
+        dimmed!.style.setProperty('display', "none");
+      });
+    }
+
+    void displayCorrect() {
+      stop!.click();
+      mdc_result_dialog_Correct?.style.removeProperty("display");
+      play!.click();
+    }
+
+    void displayInCorrect() {
+      stop!.click();
+      mdc_result_dialog_Incorrect?.style.removeProperty("display");
+      play!.click();
+    }
+
+    void removeLoadingDialog() {
+      mrd_loading?.style.display = 'none';
+    }
+
+    Future<void> updateRecord(int microTestScore) async {
+      final exp = await store
+          .collection("Lessons")
+          .where('lessonId', '==', queryParams.lessonId)
+          .get();
+      final ref = await store
+          .collection("Records")
+          .where('lessonId', '==', queryParams.lessonId)
+          .where('uid', '==', queryParams.uid)
+          .get();
+
+      var exp_amount = exp.docs.first.data()['lessonExp'];
+      var us = await store.collection("Users").doc(queryParams.uid).get();
+      var temp = ref.docs.first.data()['lessonExp'];
+      if (temp == 0) {
+        var exp_map = us.data()['earnedExp'];
+        exp_map[queryParams.courseId] =
+            exp_map[queryParams.courseId] + exp_amount;
+        us.ref.update(data: {
+          'earnedExp': exp_map,
+        });
+      }
+      var old_test_score = ref.docs.first.data()['microTestScore'] as int;
+      await ref.docs.first.ref.update(
+        data: {
+          'submittedTime': DateTime.now(),
+          'microTestScore': microTestScore,
+          'lessonExp': exp_amount,
+        },
+      );
+    }
+
+    Future<void> setDateTime() async {
+      final record = await store
+          .collection('Records')
+          .where('uid', '==', queryParams.uid)
+          .where('lessonId', '==', queryParams.lessonId)
+          .get();
+      var t = record.docs.first.data()['submittedTime'];
+
+      print(t.toString());
+      var datetime = DateFormat("yyyy-MM-dd hh:mm:ss").parse(t.toString());
+      date!.text = DateFormat("MM/dd/yyyy hh:mm:ss a").format(datetime);
+      print(date!.text);
+
+      score!.text = record.docs.first.data()['microTestScore'].toString();
+      print(record.docs.first.data()['microTestScore'].toString());
+    }
+
+    executionService.onStdout.listen((msg) async {
+      var testScoreInfo = [];
+      if (msg == 'start the test') {
+        output = '';
+      } else if (msg == 'end the test') {
+        // []
+        var lesson = await store
+            .collection('Lessons')
+            .where('lessonId', '==', queryParams.lessonId)
+            .get();
+
+        if (lesson.docs.first.data().containsKey('partialCredits') &&
+            (lesson.docs.first.data()['partialCredits'] as List<dynamic>)
+                    .length !=
+                0) {
+          for (int i = 0;
+              i <
+                  (lesson.docs.first.data()['partialCredits'] as List<dynamic>)
+                      .length;
+              i++) {
+            testScoreInfo.add((lesson.docs.first.data()['partialCredits']
+                as List<dynamic>)[i]['point']);
+          }
+        } else {
+          testScoreInfo.add(100);
+        }
+        // var testScoreInfo = await lesson.docs.first.data()['TestScoreInfo'];
+
+        var testList =
+            await lesson.docs.first.data()['TestList'] as List<dynamic>;
+        removeLoadingDialog();
+        int score = 0;
+        var outList = output.substring(0, output.length - 1).split('\n');
+        // print("outList : ${outList.length}");
+        // print("outList : ${outList.toString()}");
+        print('output : ' + output);
+        print('output : ' + output.substring(0, output.length - 1));
+        print('testList : ' +
+            (testList[0] as String)
+                .substring(0, (testList[0] as String).length));
+        print('testList : ' +
+            (testList[0] as String)
+                .substring(0, (testList[0] as String).length - 1));
+        // print(output.substring(0, output.length - 1) == testList[0].toString());
+        // print(output.contains(testList[0].toString()));
+        // print(output.compareTo(testList[0].toString()));
+        print(output.codeUnits);
+        print(testList[0].toString().codeUnits);
+        // print(output.length);
+        // print(testList[0].toString().length);
+
+        // if (outList.length != testList.length) {
+        //   displayInCorrect();
+        //   print('incorrect testr');
+        // } else
+
+        if (testList.length == 1) {
+          if (output.substring(0, output.length) ==
+              testList[0]
+                  .toString()
+                  .substring(0, testList[0].toString().length)) {
+            displayCorrect();
+            print('correct testr');
+            score = 100;
+          } else {
+            displayInCorrect();
+            print('incorrect testr');
+            score = 0;
+          }
+        } else {
+          for (int i = 0; i < 6; i++) {
+            if (i < testList.length) {
+              // print("output : " + output.codeUnits.toString());
+              // print(output);
+              // print("testList [$i] : " +
+              //     testList[i].toString().codeUnits.toString());
+              // print(testList[i]);
+              if (output.contains(testList[i] as String)) {
+                print('$i is correct');
+                setCorrect(i + 2);
+                score += testScoreInfo[i] as int;
+              } else {
+                print('$i is incorrect');
+                setInCorrect(i + 2);
+              }
+            } else {
+              setBlur(i + 1);
+            }
+          }
+          await endTest();
+
+          print('partial correct test');
+        }
+        await updateRecord(score);
+        await setDateTime();
+      } else {
+        output += msg.replaceAll('\n', '');
+        // output += '\n';
+        consoleExpandController.showOutput(msg);
+      }
+    });
+    // print("serve test4");
+    executionService.testResults.listen((result) async {
+      int microTestScore = 0;
+      final exp = await store
+          .collection("Lessons")
+          .where('lessonId', '==', queryParams.lessonId)
+          .get();
+      final ref = await store
+          .collection("Records")
+          .where('lessonId', '==', queryParams.lessonId)
+          .where('uid', '==', queryParams.uid)
+          .get();
+      print('reached testing code');
+      // if (result.messages.isEmpty) {
+      List<String> messages = ['Result'];
+      removeLoadingDialog();
+
+      if (queryParams.courseId == "CFXkr5tU78nGHWUiTOY5" ||
+          queryParams.courseId == "CULt2l9bl7y4Ib3Si693") {
+        if (result.messages.length > 2 && result.messages[0] == '부분점수 문제') {
+          List splitList;
+          List forFirebase = [];
+          for (int i = 2; i < result.messages.length; i++) {
+            String str = "";
+            splitList = result.messages[i].split(',');
+            for (int j = 1; j < splitList.length; j++) {
+              if (splitList[j] == "T")
+                str += "true";
+              else
+                str += "false";
+              if (j != splitList.length - 1) str += ",";
+            }
+            forFirebase.add(str);
+            microTestScore += int.parse(splitList[0] as String);
+            if (splitList[0] != '0') {
+              setCorrect(i);
+            } else {
+              setInCorrect(i);
+            }
+          }
+          print("forFirebase" + forFirebase.toString());
+          await ref.docs.first.ref.update(
+            data: {
+              'partialCreditStatus': forFirebase,
+            },
+          );
+          for (int i = 6; i > result.messages.length - 2; i--) {
+            setBlur(i);
+          }
+          endTest();
+          print('for check');
+        } else {
+          microTestScore = (result.success ? 100 : 0);
+          if (microTestScore == 100) {
+            displayCorrect();
+          } else {
+            displayInCorrect();
+          }
+        }
+
+        if (ref.docs.isNotEmpty) {
+          await updateRecord(microTestScore);
+        } else {
+          print("document doesnt exist");
+        }
+        bool passOrFail = false;
+        if (microTestScore == 100) {
+          passOrFail = true;
+        }
+        await setDateTime();
       }
       testResultBox.showStrings(
         result.messages,
@@ -367,7 +790,7 @@ class Embed extends EditorUi {
     _initBusyLights();
 
     _initModules().then((_) => _init()).then((_) => _emitReady());
-
+    // print("serve test end");
     SearchController(editorFactory, editor, snackbar);
   }
 
@@ -529,9 +952,29 @@ class Embed extends EditorUi {
         // set initial sizes (in percentages)
         sizes: [initialSplitPercent, (100 - initialSplitPercent)],
         // set the minimum sizes (in pixels)
-        minSize: [100, 100],
+        minSize: [375, 375],
       );
+      print('gutter1');
+      gutter = querySelector('.gutter.gutter-horizontal');
+      if (queryParams.gutter != true) {
+        print('disabling gutter is done');
+        gutter!.style.setProperty('pointer-events', 'none');
+      }
       listenForResize(splitterElements[0]);
+
+      print("before loading");
+      if (queryParams.uid != null &&
+          queryParams.courseId != null &&
+          queryParams.chapterId != null &&
+          queryParams.lessonId != null) {
+        loadCodeFromFirebase();
+      } else if (gistId!.isNotEmpty ||
+          sampleId.isNotEmpty ||
+          githubParamsPresent) {
+        _loadAndShowGist(analyze: false);
+      } else if (gistId!.isEmpty) {
+        openInDartPadButton.toggleAttr('hidden', true);
+      }
     }
 
     if (gistId!.isNotEmpty || sampleId.isNotEmpty || githubParamsPresent) {
@@ -546,6 +989,63 @@ class Embed extends EditorUi {
     editorIsBusy = false;
   }
 
+  void loadCodeFromFirebase() async {
+    final Firestore store = firebase.firestore();
+
+    var data =
+        await store.collection('Lessons').doc(queryParams.lessonId).get();
+    // print("after loading lessons");
+    var ref = await store
+        .collection("Records")
+        .where('lessonId', '==', queryParams.lessonId)
+        .where('uid', '==', queryParams.uid)
+        .get();
+    // print("after loading records");
+    bool flag = false;
+    var temp = "";
+    if (!ref.docs.isEmpty) {
+      flag = ref.docs.first.exists &&
+          ref.docs.first.data()['userWrittenCode'].toString().isNotEmpty;
+      if (flag == true) {
+        temp = ref.docs.first
+            .data()['userWrittenCode']
+            .replaceAll(
+                """dynamic _result(bool success, [List<String> messages = const []]) {
+  // Join messages into a comma-separated list for inclusion in the JSON array.
+  final joinedMessages = messages.map((m) => '"\$m"').join(',');
+  print('__TESTRESULT__ {"success": \$success, "messages": [\$joinedMessages]}');
+}
+
+// Ensure we have at least one use of `_result`.
+var resultFunction = _result;
+
+// Placeholder for unimplemented methods in dart-pad exercises.
+// ignore: non_constant_identifier_names, sdk_version_never
+Never TODO([String message = '']) => throw UnimplementedError(message);""", '')
+            .replaceAll('dynamic', 'void')
+            .replaceAll('testResult.add', 'print')
+            .replaceAll('mainTest', 'main') as String;
+      }
+    }
+    // print(data.docs.first.data()['mlCode']);
+    // print("중간 체크");
+    print("code from firebase");
+    print(queryParams.lessonId);
+    print(data.data()['mlCode']);
+
+    setContextSources(<String, String>{
+      'main.dart': flag ? temp as String : data.data()['mlCode'] as String,
+      'index.html': '',
+      'styles.css': '',
+      'solution.dart': '',
+      'test.dart': '',
+      'hint.txt': '',
+    });
+    mrd_init = querySelector(".mdc-result-dialog-init");
+    mrd_init!.style.setProperty('display', 'none');
+    // print("setContextSources done");
+  }
+
   @override
   void initKeyBindings() {
     keys.bind(const ['ctrl-space', 'macctrl-space'], () {
@@ -558,6 +1058,24 @@ class Embed extends EditorUi {
       if (context.focusedEditor == 'dart') {
         editor.showCompletions(onlyShowFixes: true);
       }
+    }, 'Quick fix');
+
+    keys.bind(const ['shift-macctrl-enter', 'shift-ctrl-enter'], () async {
+      dimmed!.style.removeProperty("display");
+      await (mrd_loading?.style.removeProperty("display"));
+      await handleRun(test: true);
+
+      await Future.delayed(Duration(seconds: 3)).then((value) {
+        mrd_finish?.style.display = 'none';
+        mdc_result_dialog_Correct?.style.setProperty('display', "none");
+        mdc_result_dialog_Incorrect!.style.setProperty('display', "none");
+        mrd_finish!.style.setProperty('display', "none");
+        dimmed!.style.setProperty('display', "none");
+      });
+
+      submit_button!.style.setProperty('display', 'none');
+      re_submit_button!.style.removeProperty('display');
+      // print("shift-macctrl-enter");
     }, 'Quick fix');
 
     keys.bind(const ['shift-ctrl-f', 'shift-macctrl-f'], () {
@@ -708,7 +1226,7 @@ class Embed extends EditorUi {
     tabController.setTabVisibility(
         'test', context.testMethod.isNotEmpty && _showTestCode);
     menuButton.toggleAttr('hidden', false);
-    showHintButton.element.hidden = context.hint.isEmpty;
+    // showHintButton.element.hidden = context.hint.isEmpty;
     solutionTab.toggleAttr('hidden', context.solution.isEmpty);
     editorIsBusy = false;
   }
@@ -718,7 +1236,8 @@ class Embed extends EditorUi {
       '${executionService.testResultDecoration}';
 
   @override
-  Future<bool> handleRun() async {
+  Future<bool> handleRun({bool test = false, String str = "none"}) async {
+    // print("serve test 10");
     if (editorIsBusy) {
       return false;
     }
@@ -738,8 +1257,8 @@ class Embed extends EditorUi {
     testResultBox.hide();
     hintBox.hide();
     consoleExpandController.clear();
-
-    final success = await super.handleRun();
+    // print("serve test11");
+    final success = await super.handleRun(test: test);
 
     editorIsBusy = false;
 
@@ -901,13 +1420,13 @@ class Embed extends EditorUi {
   }
 
   int get initialSplitPercent {
-    const defaultSplitPercentage = 70;
+    const defaultSplitPercentage = 90;
 
     var s = queryParams.initialSplit ?? defaultSplitPercentage;
 
     // keep the split within the range [5, 95]
-    s = math.min(s, 95);
-    s = math.max(s, 5);
+    s = math.min(s, 100);
+    s = math.max(s, 50);
     return s;
   }
 

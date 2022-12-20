@@ -31,11 +31,16 @@ class DartservicesApi {
         CompileResponse(),
       );
 
-  Future<CompileDDCResponse> compileDDC(CompileRequest request) => _request(
-        'compileDDC',
-        request,
-        CompileDDCResponse(),
-      );
+  Future<CompileDDCResponse> compileDDC(CompileRequest request) async {
+    request.source = request.source.replaceAll("https://firebasestorage.",
+        "https://cors-anywhere-my.onrender.com/https://firebasestorage.");
+    print(request.source);
+    return _request(
+      'compileDDC',
+      request,
+      CompileDDCResponse(),
+    );
+  }
 
   Future<CompleteResponse> complete(SourceRequest request) => _request(
         'complete',
