@@ -9,8 +9,6 @@ Microlearnable DartPad는 오픈소스
 Microlearnable 수업 흐름에 필요한 강의 코드 로딩, 제출, 채점, 학습 기록 저장
 기능을 추가했습니다.
 
-![DartPad](https://raw.githubusercontent.com/dart-lang/dart-pad/master/doc/images/Sunflower.png)
-
 ## 프로젝트 목적
 
 - Microlearnable 수업 페이지 안에서 Dart/Flutter 실습을 바로 진행할 수 있도록
