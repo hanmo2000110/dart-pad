@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/browser_client.dart';
 import 'package:protobuf/protobuf.dart';
+import '../microlearnable_config.dart';
 import '../src/protos/dart_services.pb.dart';
 export '../src/protos/dart_services.pb.dart';
 
@@ -32,9 +33,8 @@ class DartservicesApi {
       );
 
   Future<CompileDDCResponse> compileDDC(CompileRequest request) async {
-    request.source = request.source.replaceAll("https://firebasestorage.",
-        "https://cors-anywhere-my.onrender.com/https://firebasestorage.");
-    print(request.source);
+    request.source =
+        MicrolearnableConfig.proxyFirebaseStorageUrls(request.source);
     return _request(
       'compileDDC',
       request,

@@ -1,81 +1,122 @@
-# DartPad
+# Microlearnable DartPad
 
-DartPad is a free, open-source online editor to help developers learn about Dart
-and Flutter. You can access it at [dartpad.dev](http://dartpad.dev).
+Microlearnable DartPad는 오픈소스
+[DartPad](https://github.com/dart-lang/dart-pad) 클라이언트를 기반으로,
+개발도상국 학생을 위한 Flutter 학습 플랫폼 Microlearnable에 맞게
+커스터마이징한 임베디드 코드 실습 환경입니다.
 
-**What is it? What does it do?**
-
-DartPad began as an online playground for the Dart language built by the Dart
-tools team in 2015. It compiles, analyzes, and displays the results of its
-users' Dart code, and can be embedded in other websites as an iframe.
-
-In Dec 2019, we launched a new version of DartPad (dartpad.dev) with a fresh new
-look-and-feel and support for the popular Flutter UI toolkit. To learn more
-about the new DartPad, please check this [blog
-post](https://medium.com/dartlang/a-brand-new-dartpad-dev-with-flutter-support-16fe6027784).
-Interested in embedding DartPad in your websites? Check out this [embedding
-guide](https://github.com/dart-lang/dart-pad/wiki/Embedding-Guide).
+원본 DartPad의 코드 편집, 정적 분석, 컴파일, iframe 실행 구조는 유지하면서
+Microlearnable 수업 흐름에 필요한 강의 코드 로딩, 제출, 채점, 학습 기록 저장
+기능을 추가했습니다.
 
 ![DartPad](https://raw.githubusercontent.com/dart-lang/dart-pad/master/doc/images/Sunflower.png)
 
-## **Related projects**
+## 프로젝트 목적
 
-See the [dart-services](https://github.com/dart-lang/dart-services) repo for the
-implementation of the backend service that powers compilation for DartPad.
+- Microlearnable 수업 페이지 안에서 Dart/Flutter 실습을 바로 진행할 수 있도록
+  DartPad를 iframe 기반으로 임베딩합니다.
+- Firebase에 저장된 강의 코드와 학습자 기록을 불러와 개인별 실습 상태를
+  복원합니다.
+- 제출 및 재제출 흐름을 제공하고, 점수와 제출 시간을 학습 기록에 반영합니다.
+- 정답, 오답, 로딩, 완료 상태를 별도 결과 다이얼로그와 시각 피드백으로
+  보여줍니다.
+- `courseId`, `chapterId`, `lessonId`, `uid` 등 플랫폼 연동에 필요한 query
+  parameter를 지원합니다.
 
-## **How did we build DartPad?**
+## 주요 커스터마이징
 
-Interested in the tools we used to build DartPad? We used [Material
-components](https://material.io/develop/web/) for the web UI via
-[package:mdc_web](https://pub.dev/packages/mdc_web), and Dart for the [backend
-services](https://github.com/dart-lang/dart-services) to run compilation. We put
-together some [documentation](https://github.com/dart-lang/dart-pad/wiki) about
-the hosted services - continuous integration, code coverage, and cross-browser
-testing that we used to build DartPad.
+주요 변경 지점은 다음과 같습니다.
 
-## **Issues and bugs**
+- `lib/embed.dart`: 임베드 초기화, Firebase 기반 강의 코드 로딩, 결과 다이얼로그
+  제어, 제출/재제출 흐름을 담당합니다.
+- `lib/sharing/editor_ui.dart`: 실행 및 테스트 제출 시 사용자 코드와 테스트 코드를
+  조합해 Dart services로 전달합니다.
+- `lib/util/query_params.dart`: Microlearnable 연동에 필요한 `courseId`,
+  `chapterId`, `lessonId`, `uid`, `gutter` parameter를 추가했습니다.
+- `lib/services/dartservices.dart`: Dart services 요청 전에 Firebase Storage URL
+  proxy 처리를 수행합니다.
+- `web/embed-dart.html`, `web/embed-flutter.html`: 제출 버튼, 점수, 제출 시간,
+  결과 모달을 포함한 임베드 화면 구조를 커스터마이징했습니다.
+- `web/*_lottie.json`, `web/num*.png`, `web/submit_arrow.png`: 학습자 피드백에
+  사용되는 시각 리소스입니다.
 
-Please file reports on the [GitHub Issue
-Tracker](https://github.com/dart-lang/dart-pad/issues).
+구현 흐름과 유지보수 메모는
+[`docs/MICROLEARNABLE_CUSTOMIZATION.md`](docs/MICROLEARNABLE_CUSTOMIZATION.md)에
+정리했습니다.
 
-### **Bug triage priorities**
+## 설정
 
-Each issue in the tracker will be assigned a priority based on the impact to
-users when the issue appears and the number of users impacted (widespread or
-rare).
+Firebase 프로젝트 값은 소스 코드에 직접 하드코딩하지 않고
+`String.fromEnvironment`를 통해 빌드 시점에 주입합니다. DartPad가 사용하는
+`build_web_compilers` 설정에 환경 값을 전달하면 됩니다.
 
-Some examples of likely triage priorities:
+`dart2js` 빌드에서는 `dart2js_args`에 `-D` 값을 추가합니다.
 
-*   P0
-    *   Broken internal/external navigation links within DartPad
-    *   JavaScript console errors indicating problems with DartPad functionality in many cases, widespread.
-    *   App is down / not loading
-    *   Interface bugs preventing all or almost all uses of the application
-    *   Unable to compile or analyze valid Flutter/Dart code (widespread and/or with error messages that aren't retryable)
-*   P1
-    *   Unable to compile or analyze valid Flutter/Dart code in edge cases only, and/or retryable
-    *   Incorrect or not up-to-date warning information for invalid Flutter/Dart code (widespread)
-    *   Interface bugs interfering with common uses of the application, widespread
-    *   JavaScript console errors indicating problems with DartPad functionality (edge cases / not widespread)
-    *   Enhancements that have significant data around them indicating they are a big win
-    *   User performance problem (e.g. app loading / run / analysis), widespread
-*   P2
-    *   Incorrect or not up-to-date warning information for invalid Flutter/Dart code (edge cases / not widespread)
-    *   JavaScript errors not resulting in visible problems outside of the console (widespread)
-    *   Interface bugs interfering with the use of the application in edge cases.
-    *   User interface and display warts that are not significantly impacting functionality, widespread
-    *   Enhancements that are agreed to be a good idea even if they don't have data around them indicating they are a big win
-    *   User performance problem (e.g. app loading / run analysis), edge cases / not widespread
-*   P3
-    *   Minor user interface warts not significantly impacting functionality, on edge cases only.
-    *   JavaScript errors not resulting in visible problems outside of the console (edge cases)
-    *   Enhancements that are speculative or where we are unsure of impacts/tradeoffs
+```yaml
+targets:
+  $default:
+    builders:
+      build_web_compilers|entrypoint:
+        options:
+          dart2js_args:
+          - -DMICROLEARNABLE_FIREBASE_API_KEY=...
+          - -DMICROLEARNABLE_FIREBASE_AUTH_DOMAIN=...
+          - -DMICROLEARNABLE_FIREBASE_DATABASE_URL=...
+          - -DMICROLEARNABLE_FIREBASE_PROJECT_ID=...
+          - -DMICROLEARNABLE_FIREBASE_APP_ID=...
+          - -DMICROLEARNABLE_FIREBASE_STORAGE_BUCKET=...
+```
 
-## **License and Contributing**
+DDC 개발 빌드에서는 `global_options`의 `environment`에 같은 값을 추가합니다.
 
-Contributions welcome! Please read this short
-[guide](https://github.com/dart-lang/dart-pad/blob/master/CONTRIBUTING.md)
-first. You can view our license
-[here](https://github.com/dart-lang/dart-pad/blob/master/LICENSE).
+```yaml
+global_options:
+  build_web_compilers:ddc:
+    options:
+      environment:
+        MICROLEARNABLE_FIREBASE_API_KEY: ...
+        MICROLEARNABLE_FIREBASE_AUTH_DOMAIN: ...
+        MICROLEARNABLE_FIREBASE_DATABASE_URL: ...
+        MICROLEARNABLE_FIREBASE_PROJECT_ID: ...
+        MICROLEARNABLE_FIREBASE_APP_ID: ...
+        MICROLEARNABLE_FIREBASE_STORAGE_BUCKET: ...
+```
 
+선택 설정:
 
+- `MICROLEARNABLE_FIREBASE_AUTH_EMAIL`
+- `MICROLEARNABLE_FIREBASE_AUTH_PASSWORD`
+- `MICROLEARNABLE_STORAGE_CORS_PROXY`
+
+이메일/비밀번호 인증 값이 없으면 익명 Firebase 인증을 시도합니다. 이 경우
+Firestore 보안 규칙도 해당 인증 방식에 맞게 구성되어야 합니다.
+
+## 로컬 실행
+
+의존성 설치:
+
+```bash
+dart pub get
+```
+
+정적 분석 및 테스트:
+
+```bash
+dart analyze
+dart test
+```
+
+로컬 서버 실행:
+
+```bash
+dart run grinder serve
+```
+
+## 원본 프로젝트
+
+이 저장소는 Dart와 Flutter 학습을 위한 오픈소스 온라인 에디터 DartPad를
+기반으로 합니다. 원본 프로젝트는 Dart 팀이 관리하며
+[dart-lang/dart-pad](https://github.com/dart-lang/dart-pad)에서 확인할 수
+있습니다.
+
+원본 BSD-style 라이선스는 [`LICENSE`](LICENSE)에 유지되어 있습니다.

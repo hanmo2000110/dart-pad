@@ -28,6 +28,7 @@ import 'elements/counter.dart';
 import 'elements/dialog.dart';
 import 'elements/elements.dart';
 import 'elements/material_tab_controller.dart';
+import 'microlearnable_config.dart';
 import 'modules/dart_pad_module.dart';
 import 'modules/dartservices_module.dart';
 import 'search_controller.dart';
@@ -66,28 +67,29 @@ String output = '';
 late Firestore store;
 
 Future<void> init(EmbedOptions options) async {
-  // firebase.initializeApp(
-  //   apiKey: 'AIzaSyDoTPZVYLfCtW3dcr3fG65w8jESR2FM19U',
-  //   authDomain: 'new-ml-6c02d.firebaseapp.com',
-  //   databaseURL: 'new-ml-6c02d.firebaseio.com',
-  //   projectId: 'new-ml-6c02d',
-  //   appId: '1:801746107741:web:d3b0f57301fc5c2978fcb4',
-  //   storageBucket: 'new-ml-6c02d.appspot.com',
-  // );
+  if (!MicrolearnableConfig.hasFirebaseConfig) {
+    throw StateError(
+      'Missing Microlearnable Firebase configuration: '
+      '${MicrolearnableConfig.missingFirebaseConfigKeys.join(', ')}',
+    );
+  }
 
   await firebase.initializeApp(
-    apiKey: 'AIzaSyAXnmQ_7P1wnY74vdMeZHdWExwbpI-ncA0',
-    authDomain: 'new-ml-dev.firebaseapp.com',
-    databaseURL: 'new-ml-dev.firebaseio.com',
-    projectId: 'new-ml-dev',
-    appId: '1:801746107741:web:d3b0f57301fc5c2978fcb4',
-    storageBucket: 'new-ml-dev.appspot.com',
+    apiKey: MicrolearnableConfig.firebaseApiKey,
+    authDomain: MicrolearnableConfig.firebaseAuthDomain,
+    databaseURL: MicrolearnableConfig.firebaseDatabaseUrl,
+    projectId: MicrolearnableConfig.firebaseProjectId,
+    appId: MicrolearnableConfig.firebaseAppId,
+    storageBucket: MicrolearnableConfig.firebaseStorageBucket,
   );
-  // print("serve test");
-  await firebase
-      .auth()
-      // .signInAnonymously();
-      .signInWithEmailAndPassword("dartpad@gmail.com", "12345678");
+  if (MicrolearnableConfig.hasEmailPasswordAuth) {
+    await firebase.auth().signInWithEmailAndPassword(
+          MicrolearnableConfig.firebaseAuthEmail,
+          MicrolearnableConfig.firebaseAuthPassword,
+        );
+  } else {
+    await firebase.auth().signInAnonymously();
+  }
 
   mrd_finish = querySelector('.mdc-result-dialog-finish');
   mrd_finish?.style.setProperty('display', "none");
@@ -509,7 +511,6 @@ class Embed extends EditorUi {
           'earnedExp': exp_map,
         });
       }
-      var old_test_score = ref.docs.first.data()['microTestScore'] as int;
       await ref.docs.first.ref.update(
         data: {
           'submittedTime': DateTime.now(),
@@ -527,13 +528,10 @@ class Embed extends EditorUi {
           .get();
       var t = record.docs.first.data()['submittedTime'];
 
-      print(t.toString());
       var datetime = DateFormat("yyyy-MM-dd hh:mm:ss").parse(t.toString());
       date!.text = DateFormat("MM/dd/yyyy hh:mm:ss a").format(datetime);
-      print(date!.text);
 
       score!.text = record.docs.first.data()['microTestScore'].toString();
-      print(record.docs.first.data()['microTestScore'].toString());
     }
 
     executionService.onStdout.listen((msg) async {
@@ -568,41 +566,15 @@ class Embed extends EditorUi {
             await lesson.docs.first.data()['TestList'] as List<dynamic>;
         removeLoadingDialog();
         int score = 0;
-        var outList = output.substring(0, output.length - 1).split('\n');
-        // print("outList : ${outList.length}");
-        // print("outList : ${outList.toString()}");
-        print('output : ' + output);
-        print('output : ' + output.substring(0, output.length - 1));
-        print('testList : ' +
-            (testList[0] as String)
-                .substring(0, (testList[0] as String).length));
-        print('testList : ' +
-            (testList[0] as String)
-                .substring(0, (testList[0] as String).length - 1));
-        // print(output.substring(0, output.length - 1) == testList[0].toString());
-        // print(output.contains(testList[0].toString()));
-        // print(output.compareTo(testList[0].toString()));
-        print(output.codeUnits);
-        print(testList[0].toString().codeUnits);
-        // print(output.length);
-        // print(testList[0].toString().length);
-
-        // if (outList.length != testList.length) {
-        //   displayInCorrect();
-        //   print('incorrect testr');
-        // } else
-
         if (testList.length == 1) {
           if (output.substring(0, output.length) ==
               testList[0]
                   .toString()
                   .substring(0, testList[0].toString().length)) {
             displayCorrect();
-            print('correct testr');
             score = 100;
           } else {
             displayInCorrect();
-            print('incorrect testr');
             score = 0;
           }
         } else {
@@ -614,11 +586,9 @@ class Embed extends EditorUi {
               //     testList[i].toString().codeUnits.toString());
               // print(testList[i]);
               if (output.contains(testList[i] as String)) {
-                print('$i is correct');
                 setCorrect(i + 2);
                 score += testScoreInfo[i] as int;
               } else {
-                print('$i is incorrect');
                 setInCorrect(i + 2);
               }
             } else {
@@ -626,8 +596,6 @@ class Embed extends EditorUi {
             }
           }
           await endTest();
-
-          print('partial correct test');
         }
         await updateRecord(score);
         await setDateTime();
@@ -640,18 +608,11 @@ class Embed extends EditorUi {
     // print("serve test4");
     executionService.testResults.listen((result) async {
       int microTestScore = 0;
-      final exp = await store
-          .collection("Lessons")
-          .where('lessonId', '==', queryParams.lessonId)
-          .get();
       final ref = await store
           .collection("Records")
           .where('lessonId', '==', queryParams.lessonId)
           .where('uid', '==', queryParams.uid)
           .get();
-      print('reached testing code');
-      // if (result.messages.isEmpty) {
-      List<String> messages = ['Result'];
       removeLoadingDialog();
 
       if (queryParams.courseId == "CFXkr5tU78nGHWUiTOY5" ||
@@ -677,7 +638,6 @@ class Embed extends EditorUi {
               setInCorrect(i);
             }
           }
-          print("forFirebase" + forFirebase.toString());
           await ref.docs.first.ref.update(
             data: {
               'partialCreditStatus': forFirebase,
@@ -686,8 +646,7 @@ class Embed extends EditorUi {
           for (int i = 6; i > result.messages.length - 2; i--) {
             setBlur(i);
           }
-          endTest();
-          print('for check');
+          await endTest();
         } else {
           microTestScore = (result.success ? 100 : 0);
           if (microTestScore == 100) {
@@ -701,10 +660,6 @@ class Embed extends EditorUi {
           await updateRecord(microTestScore);
         } else {
           print("document doesnt exist");
-        }
-        bool passOrFail = false;
-        if (microTestScore == 100) {
-          passOrFail = true;
         }
         await setDateTime();
       }
@@ -1027,14 +982,8 @@ Never TODO([String message = '']) => throw UnimplementedError(message);""", '')
             .replaceAll('mainTest', 'main') as String;
       }
     }
-    // print(data.docs.first.data()['mlCode']);
-    // print("중간 체크");
-    print("code from firebase");
-    print(queryParams.lessonId);
-    print(data.data()['mlCode']);
-
     setContextSources(<String, String>{
-      'main.dart': flag ? temp as String : data.data()['mlCode'] as String,
+      'main.dart': flag ? temp : data.data()['mlCode'] as String,
       'index.html': '',
       'styles.css': '',
       'solution.dart': '',
@@ -1186,12 +1135,6 @@ Never TODO([String message = '']) => throw UnimplementedError(message);""", '')
 
   void _handleOpenInDartPad() {
     window.open(window.location.href, 'DartPad_$gistId');
-  }
-
-  /// Returns the name of the current embed mode
-  /// (html, flutter, inline, dart, flutter_showcase).
-  String get _modeName {
-    return options.mode.toString().split('.').last;
   }
 
   String _getActiveSourceCode() {
@@ -1372,16 +1315,6 @@ Never TODO([String message = '']) => throw UnimplementedError(message);""", '')
     }).toList();
     issues.removeWhere((issue) => issue.line == -99);
     return issues;
-  }
-
-  void _showInstallPage() {
-    if (_modeName == 'dart' || _modeName == 'html') {
-      ga.sendEvent('main', 'install-dart');
-      window.open('https://dart.dev/get-dart', '_blank');
-    } else {
-      ga.sendEvent('main', 'install-flutter');
-      window.open('https://flutter.dev/get-started/install', '_blank');
-    }
   }
 
   Future<void> _format() async {
